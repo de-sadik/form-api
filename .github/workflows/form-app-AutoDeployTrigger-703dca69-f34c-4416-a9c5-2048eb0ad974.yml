@@ -1,0 +1,47 @@
+name: Trigger auto deployment for form-app
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ master ]
+    paths:
+    - '**'
+    - '.github/workflows/form-app-AutoDeployTrigger-703dca69-f34c-4416-a9c5-2048eb0ad974.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:      
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write #This is required for requesting the OIDC JWT Token
+      contents: read #Required when GH token is used to authenticate with private repo
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.FORMAPP_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.FORMAPP_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.FORMAPP_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }} 
+          registryUrl: 
+          registryUsername: ${{ secrets.FORMAPP_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.FORMAPP_REGISTRY_PASSWORD }}
+          containerAppName: form-app
+          resourceGroup: fast-api
+          imageToBuild: default/[parameters('containerAppName')]:${{ github.sha }}
+          _buildArgumentsKey_: |
+            _buildArgumentsValues_
+
+
